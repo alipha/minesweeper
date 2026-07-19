@@ -1,0 +1,57 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+
+# Visual Studio and user-specific state
+.vs/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains IDEs
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+
+# Test results and coverage
+[Tt]est[Rr]esult*/
+TestResults/
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+
+# NuGet packages and generated files
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts.json
+
+# .NET tooling
+.dotnet/
+.store/
+BenchmarkDotNet.Artifacts/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
