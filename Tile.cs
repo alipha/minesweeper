@@ -10,13 +10,15 @@ internal enum TileState
 
 internal struct Tile
 {
-    public bool IsMine { get; set; }
-    public TileState State { get; set; }
-    public int AdjacentMines { get; set; }
+    public bool IsMine;
+    public bool NeighborsKnown;
+    public TileState State;
+    public int AdjacentMines;
 
     public Tile()
     {
         IsMine = false;
+        NeighborsKnown = false;
         State = TileState.Hidden;
         AdjacentMines = 0;
     }

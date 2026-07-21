@@ -3,26 +3,31 @@ namespace Minesweeper;
 
 internal class Board
 {
-    public Tile[] Tiles;
-    public int Width;
-    public int Height;
-    public int Bombs;
-    public ulong Seed;
-    public int StartX;
-    public int StartY;
+    public readonly Tile[] Tiles;
 
-    private readonly AdjacentTiles adjacentTiles;
-    private readonly Stack<int> revealStack;
-    private readonly bool[] revealQueued;
+    public readonly AdjacentTiles AdjacentTiles;
+    public readonly int Width;
+    public readonly int Height;
+    public readonly int Bombs;
+    public ulong Seed { get; private set; }
+    public int StartX { get; private set; }
+    public int StartY { get; private set; }
 
     public Board(int width, int height, int bombs) {
+        if (bombs * 3 > width * height)
+            throw new ArgumentException($"Too many bombs: {bombs} > {width * height / 3}");
         Tiles = new Tile[width * height];
         Width = width;
         Height = height;
         Bombs = bombs;
-        adjacentTiles = new AdjacentTiles(width, height);
-        revealStack = new Stack<int>(Tiles.Length);
-        revealQueued = new bool[Tiles.Length];
+        AdjacentTiles = new AdjacentTiles(width, height);
+    }
+
+    public int GetIndex(int x, int y)
+    {
+        if (Solver.DEBUG_CHECKS && (x < 0 || x >= Width || y < 0 || y >= Height))
+            throw new ArgumentOutOfRangeException($"Invalid coordinates: ({x}, {y})");
+        return x + y * Width;
     }
 
     public void Generate(ulong seed, int startX, int startY)
@@ -39,7 +44,7 @@ internal class Board
 
         int startIndex = startX + startY * Width;
         Tiles[startIndex].IsMine = true;
-        ReadOnlySpan<int> adjacentIndices = adjacentTiles.Get(startIndex);
+        ReadOnlySpan<int> adjacentIndices = AdjacentTiles.Get(startIndex);
         foreach (int adjacentIndex in adjacentIndices)
         {
             Tiles[adjacentIndex].IsMine = true;
@@ -59,15 +64,18 @@ internal class Board
         Tiles[startIndex].IsMine = false; // Ensure the starting tile is not a mine
         foreach (int adjacentIndex in adjacentIndices)
         {
-            Tiles[adjacentIndex].IsMine = true;
+            Tiles[adjacentIndex].IsMine = false;
         }
+
+        if (Solver.DEBUG_CHECKS && Tiles.Count(tile => tile.IsMine) != Bombs)
+            throw new InvalidOperationException("Generated mine count does not match Board.Bombs.");
 
         // Calculate adjacent mines
         for (int i = 0; i < Tiles.Length; ++i)
         {
             if (Tiles[i].IsMine)
                 continue;
-            adjacentIndices = adjacentTiles.Get(i);
+            adjacentIndices = AdjacentTiles.Get(i);
             int count = 0;
             foreach (int adjacentIndex in adjacentIndices)
             {
@@ -76,94 +84,6 @@ internal class Board
             }
             Tiles[i].AdjacentMines = count;
         }
-    }
-
-    public void Reveal(int index)
-    {
-        if (Tiles[index].State == TileState.Revealed)
-            QueueReveal(index);
-        else
-            RevealTile(index);
-
-        while (revealStack.Count != 0)
-        {
-            int currentIndex = revealStack.Pop();
-            revealQueued[currentIndex] = false;
-
-            ref Tile currentTile = ref Tiles[currentIndex];
-            if (currentTile.State != TileState.Revealed)
-                continue;
-
-            if (currentTile.IsMine)
-                throw new InvalidOperationException("A mine cannot be revealed.");
-
-            ReadOnlySpan<int> adjacentIndices = adjacentTiles.Get(currentIndex);
-            int flaggedCount = 0;
-            int hiddenCount = 0;
-
-            foreach (int adjacentIndex in adjacentIndices)
-            {
-                switch (Tiles[adjacentIndex].State)
-                {
-                    case TileState.Flagged:
-                        ++flaggedCount;
-                        break;
-                    case TileState.Hidden:
-                        ++hiddenCount;
-                        break;
-                }
-            }
-
-            if (hiddenCount == 0)
-                continue;
-
-            if (flaggedCount == currentTile.AdjacentMines)
-            {
-                foreach (int adjacentIndex in adjacentIndices)
-                    RevealTile(adjacentIndex);
-            }
-            else if (flaggedCount + hiddenCount == currentTile.AdjacentMines)
-            {
-                foreach (int adjacentIndex in adjacentIndices)
-                {
-                    ref Tile adjacentTile = ref Tiles[adjacentIndex];
-                    if (adjacentTile.State != TileState.Hidden)
-                        continue;
-
-                    adjacentTile.State = TileState.Flagged;
-                    QueueRevealedNeighbors(adjacentIndex);
-                }
-            }
-        }
-    }
-
-    private void RevealTile(int index)
-    {
-        ref Tile tile = ref Tiles[index];
-        if (tile.State != TileState.Hidden)
-            return;
-
-        tile.State = TileState.Revealed;
-        QueueReveal(index);
-        QueueRevealedNeighbors(index);
-    }
-
-    private void QueueRevealedNeighbors(int index)
-    {
-        foreach (int adjacentIndex in adjacentTiles.Get(index))
-        {
-            if (Tiles[adjacentIndex].State == TileState.Revealed)
-                QueueReveal(adjacentIndex);
-        }
-    }
-
-    private void QueueReveal(int index)
-    {
-        if (revealQueued[index])
-            return;
-
-        revealQueued[index] = true;
-        revealStack.Push(index);
     }
 
     public string SeedBase32

@@ -11,13 +11,13 @@ internal class Generator
     public Generator(int width, int height, int bombs, int startX, int startY)
     {
         Board = new Board(width, height, bombs);
-        Solver solver = new Solver();
+        Solver solver = new Solver(Board);
 
         Xoshiro256pp rng = new Xoshiro256pp(GetRandomUInt128());
         do
         {
             Board.Generate(rng.NextUInt64(), startX, startY);
-        } while (!solver.Solve(Board, startX, startY));
+        } while (!solver.Solve(startX, startY));
     }
 
     static UInt128 GetRandomUInt128()
